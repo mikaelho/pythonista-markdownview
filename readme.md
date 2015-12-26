@@ -1,107 +1,88 @@
 # MarkdownView
 
-MarkdownView is a Pythonista UI library component. It is a drop-in replacement for ui.TextView that supports both editing markdown tagged text and viewing it as HTML.
-
-Test link: [LINK](http://iki.fi)
+MarkdownView is a [Pythonista](http://omz-software.com/pythonista/) UI library component. It is a drop-in replacement for ui.TextView that supports both editing [markdown](https://daringfireball.net/projects/markdown/) tagged text and viewing it as HTML.
 
 ##Contents
+ 
+1. [Features](#features)
+1. [Quick start](#quick-start)
+1. [Link behavior](#link-behavior)
+1. [Additional keys](#additional-keys)
+1. [Component motivation and design principles](#component-motivation-and-design-principles)
+1. [Attributes](#attributes)
 
-1. [Features](#Features)
-1. [Link handling](#Link%20handling)
-1. [Additional keys](#Additional%20keys)
-1. [Design principles/motivation](#Design%20principles/motivation)
-1. [API](#API)
-
-## Features <a name='Features'></a> 
+## Features
 
 * Integrated markdown editing and HTML viewing modes - end editing and HTML is shown, click somewhere on the HTML text and markdown editing starts in the same position.
-*  Markdown editing supported by additional keys. (Thanks JonB for help on setting up auxiliary keys.)
+* Markdown editing supported by additional keys. (Thanks JonB for help on Obj-C.)
 * Navigation support when viewing HTML (back, forward).
 * Implements ui.TextView API.
 
-## Link handling <a name='Link%20handling'></a>
+##Quick start
 
-## Additional keys <a name='Additional%20keys'></a>
+Download both the `MarkdownView.py` script and this `readme.md` file into same directory, and you can run the script in Pythonista to view and try out editing this readme file.
 
-* Ggh
+Import MarkdownView as a module and use wherever you would use a TextView. Markdown text can be set and accessed with the _text_ attribute. Implement a delegate with `textview_did_end_editing` or  `textview_did_change` method - see the end of the MarkdownView.py file for an example. 
 
-## Design principles/motivation <a name='Design%20principles/motivation'></a>
+## Link behavior
+
+When you click a link in the HTML view:
+
+* `http:` and `https:` links are opened in Safari
+* Document-internal links (`#something`) are followed within MarkdownView
+* `file:` links are opened in Pythonista built-in browser
+* All other links like `twitter:` are opened as defined by the OS, i.e. in the relevant app, if installed.
+
+If you want to change any of these, implement a delegate class with the `webview_should_start_load` method.
+
+## Additional keys
+
+Extra keys help with markdown editing, but are in no way required, and can be turned off with `additional_keys = False` argument at instantiation. Please refer to markdown [syntax](https://daringfireball.net/projects/markdown/syntax) if not already familiar.
+
+Keys:
+
+* __&#8677;__ - Indent - Repeat adds more spaces, 2 at a time.
+* __&#8676;__ - Outdent - Removes 2 spaces at time.
+* __>__ - Quote - Repeat adds levels; there is no special support for removing levels.
+* __[]__ - Links and images - If a range is selected, the contents of the range is used for both visible text and the link; for images, you have to add the exclamation mark at the front.
+* __<>__ - In-document links - Creates an anchor (`<a>` tag) after the selection, assumed to be some heading text. At the same time, places a link to the anchor on the clipboard, typically to be pasted in a table of contents.
+* __#__ - Headings - Adds a level with each click; fourth click removes all hashes.
+* __`1.`__ - Numbered list - Replaces unordered list markers if present. Repeat removes. Indenting increases the list level.
+* __•__ - Bullet list - Regular unordered list, otherwise like the numbered list.
+* __`_`__ - Emphasis - If a range is selected, inserts an underscore at both ends of the selection. Once for emphasis, twice for strong, three times for both. Fourth time removes the underscores.
+* __`__ - Backtick - Insert character or characters around selection to indicate code - just because it is so complicated to enter on iPhone. Removes backticks if already there.
+
+For all of the above, where it makes sense, if several lines are selected, applies the change to all the lines regardless of whether they have been selected only partially.
+
+## Component motivation and design principles
 
 * Provide some rich-text editing capabilities for Pythonista UI scripts
 * In a format that is not locked to specific propietary format & program
 * Easy to deploy to an existing solution
 * Is robust (unlike straight HTML that tends to get confusing with styles etc.)
 * Make markdown editing as easy as possible, with the transition between editing and viewing as seamless as possible (in other words, no 'Edit' button)
-* But do not require deploying/taking screen space for UI elements like toolbars (i.e. be conscious of and support small screens like iPhone)
+* Do not require deploying/taking screen space for UI elements like toolbars (i.e. be conscious of and support small screens like iPhone)
 * Is lightweight, understandable and manageable by a Python programmer (not the case with using e.g. TinyMCE in a WebView)
+* Not a web browser
 
-## API <a name='API'></a>
+## Attributes
 
-### Delegates
-
-### MarkdownView attributes
-
-### Proxied attributes from TextView and WebView
-
-* alignment - as TextView, affects WebView as well
-* autocapitalization_type
-* autocorrection_type
-* auto_content_inset
-* 
-		return self.markup.auto_content_inset
-	@auto_content_inset.setter
-	def auto_content_inset(self, value):
-		self.markup.auto_content_inset = value
-		
-	@property
-	def delegate(self):
-		return self.proxy_delegate
-	@delegate.setter
-	def delegate(self, value):
-		self.proxy_delegate = value
-		
-	@property
-	def editable(self):
-		return self.markup.editable
-	@editable.setter
-	def editable(self, value):
-		self.markup.editable = value
-		
-	@property
-	def font(self):
-		return self.markup.font
-	@font.setter
-	def font(self, value):
-		self.markup.font = value
-		self.update_html()
-		
-	@property
-	def keyboard_type(self):
-		return self.markup.keyboard_type
-	@keyboard_type.setter
-	def keyboard_type(self, value):
-		self.markup.keyboard_type = value
-		
-	@property
-	def selectable(self):
-		return self.markup.selectable
-	@selectable.setter
-	def selectable(self, value):
-		self.markup.selectable = value
-		
-	@property
-	def selected_range(self):
-		return self.markup.selected_range
-	@selected_range.setter
-	def selected_range(self, value):
-		self.markup.selected_range = value
-		
-	@property
-	def spellchecking_type(self):
-		return self.markup.spellchecking_type
-	@spellchecking_type.setter
-	def spellchecking_type(self, value):
-		self.markup.spellchecking_type = value
-		
-* text
-* text_color
+* `alignment` - As TextView, affects WebView as well
+* `autocapitalization_type` - As TextView
+* `autocorrection_type` - As TextView
+* `auto_content_inset` - As TextView
+* `background_color` - As TextView, affects WebView as well
+* `css` - Your own CSS styles - _not implemented_
+* `delegate` - For receiving TextView and WebView delegated method calls. Following methods are supported:
+  * ...
+* `editable` - HTML view only. Could be useful if you want to have separate 'editable' and 'published' versions.
+* `editing` - True if currently in markdown editing mode
+* `extras` - Names of markdown extra features you want to activate, as an array of strings - see markdown2 docs
+* `font` - As TextView, affects WebView as well
+* `keyboard_type` - As TextView
+* `margins` - Tuple (), default is no margins
+* `selectable` - As TextView, does not affect WebView
+* `selected_rang`e - As TextView, does not work on WebView mode
+* `spellchecking_type` - As TextView
+* `text` - The markdown text
+* `text_color` - As TextView, affects WebView as well
