@@ -43,6 +43,11 @@ class MarkdownView(ui.View):
 		self.update_html()
 		self.markup.bounces = False 
 		
+		self.scroll_fragment = ui.WebView()
+		self.scroll_fragment.hidden = True
+		self.scroll_fragment.delegate = MarkdownView.ScrollLoadDelegate()
+		self.add_subview(self.scroll_fragment)
+		
 		if accessory_keys:
 			self.create_accessory_toolbar()
 		
@@ -114,16 +119,25 @@ class MarkdownView(ui.View):
 				r.click();
 			}
 			function initialize() {
-				scrollElem = document.getElementById("scroll_here");
-				if (scrollElem) {
-					scrollElem.scrollIntoView();
-					fromTop = scrollElem.getBoundingClientRect().top;
-					window.scrollBy(0, -window.innerHeight/2+fromTop);
+				//scrollElem = document.getElementById("scroll_here");
+				//if (scrollElem) {
+					//scrollElem.scrollIntoView();
+					//fromTop = scrollElem.getBoundingClientRect().top;
+					//window.scrollBy(0, -window.innerHeight/2+fromTop);
+				//}
+				var scrollPos = $scroll_pos;
+				if (scrollPos > -1) {
+					var totalHeight = document.getElementById("content").clientHeight;		
+					var halfScreen = window.innerHeight/2;
+					if ((totalHeight - scrollPos) > halfScreen) {
+						scrollPos -= halfScreen;
+					}
+					window.scrollBy(0, scrollPos);
+					activateLinks();
+					var r = document.getElementById("relay");
+					r.href = "$init_postfix"
+					r.click()
 				}
-				activateLinks();
-				var r = document.getElementById("relay");
-				r.href = "$init_postfix"
-				r.click()
 			}
 		</script>
 		</head>
@@ -138,8 +152,8 @@ class MarkdownView(ui.View):
 		</html>
 	'''
 		
-	def to_html(self, content_only = False):
-		result = markdown(self.markup.text, extras=self.extras)
+	def to_html(self, md, scroll_pos = -1, content_only = False):
+		result = markdown(md, extras=self.extras)
 		if not content_only:
 			(font_name, font_size) = self.font
 			result = self.htmlIntro.safe_substitute(
@@ -150,7 +164,8 @@ class MarkdownView(ui.View):
 				font_size = str(font_size)+'px',
 				init_postfix = self.init_postfix,
 				link_prefix = self.link_prefix,
-				debug_prefix = self.debug_prefix
+				debug_prefix = self.debug_prefix,
+				scroll_pos = scroll_pos
 			) + result + self.htmlOutro
 		return result
 		
@@ -162,7 +177,7 @@ class MarkdownView(ui.View):
 		return mapping[self.markup.alignment]
 		
 	def update_html(self):
-		self.web.load_html(self.to_html())
+		self.web.load_html(self.to_html(self.markup.text, 0))
 		
 		'''ACCESSORY TOOLBAR'''
 	
@@ -515,22 +530,21 @@ class MarkdownView(ui.View):
 	
 	'''TEXTVIEW DELEGATES'''
 	def textview_did_end_editing(self, textview):
-		# Place an 'invisible non-breaking character' at the end of the previous line, as it survives the markdown conversion
 		(start, end) = self.markup.selected_range
-		previous_line_end = self.markup.text.rfind('\n', 0, start)
-		if previous_line_end > 0: 
-			#self.markup.replace_range((previous_line_end, previous_line_end), u'\u200d')
-			self.markup.replace_range((previous_line_end, previous_line_end), u'\u200d')
-		html = self.to_html()
-		# After the HTML conversion, turn the character into a non-visible span element to act as scroll target
-		if previous_line_end > 0:
-			html = html.replace(u'\u200d', '<span id="scroll_here" style="display:hidden;"></span>')
-			self.markup.replace_range((previous_line_end, previous_line_end+1), '')
-		self.web.load_html(html)
-		self.web.hidden = False
-		self.editing = False
-		if self.can_call('textview_did_end_editing'):
-			self.proxy_delegate.textview_did_end_editing(textview)
+		html_fragment = self.to_html(self.markup.text[0:start])
+		self.scroll_fragment.frame = self.web.frame
+		self.scroll_fragment.load_html(html_fragment)
+
+	class ScrollLoadDelegate():
+		def webview_did_finish_load(self, webview):
+			m = webview.superview
+			scroll_pos = int(webview.eval_js('document.getElementById("content").clientHeight'))
+			html = m.to_html(m.markup.text, scroll_pos)
+			m.web.load_html(html)
+			m.web.hidden = False
+			m.editing = False
+			if m.can_call('textview_did_end_editing'):
+				m.proxy_delegate.textview_did_end_editing(textview)
 			
 	def textview_should_change(self, textview, range, replacement):
 		should_change = True
