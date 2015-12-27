@@ -114,12 +114,11 @@ class MarkdownView(ui.View):
 				r.click();
 			}
 			function initialize() {
-				//var pos = document.body.clientHeight * $scroll_pos_relative;
-				//window.scrollTo(0, pos);
 				scrollElem = document.getElementById("scroll_here");
 				if (scrollElem) {
 					scrollElem.scrollIntoView();
-					window.scrollBy(0, -window.innerHeight/2);
+					fromTop = scrollElem.getBoundingClientRect().top;
+					window.scrollBy(0, -window.innerHeight/2+fromTop);
 				}
 				activateLinks();
 				var r = document.getElementById("relay");
@@ -139,19 +138,20 @@ class MarkdownView(ui.View):
 		</html>
 	'''
 		
-	def to_html(self, scroll_pos_relative = 0):
-		(font_name, font_size) = self.font
-		result = self.htmlIntro.safe_substitute(
-			background_color = self.to_css_rgba(self.markup.background_color), 
-			text_color = self.to_css_rgba(self.markup.text_color),
-			font_family = font_name,
-			text_align = self.to_css_alignment(),
-			font_size = str(font_size)+'px',
-			scroll_pos_relative = scroll_pos_relative,
-			init_postfix = self.init_postfix,
-			link_prefix = self.link_prefix,
-			debug_prefix = self.debug_prefix
-		) + markdown(self.markup.text, extras=self.extras) + self.htmlOutro
+	def to_html(self, content_only = False):
+		result = markdown(self.markup.text, extras=self.extras)
+		if not content_only:
+			(font_name, font_size) = self.font
+			result = self.htmlIntro.safe_substitute(
+				background_color = self.to_css_rgba(self.markup.background_color), 
+				text_color = self.to_css_rgba(self.markup.text_color),
+				font_family = font_name,
+				text_align = self.to_css_alignment(),
+				font_size = str(font_size)+'px',
+				init_postfix = self.init_postfix,
+				link_prefix = self.link_prefix,
+				debug_prefix = self.debug_prefix
+			) + result + self.htmlOutro
 		return result
 		
 	def to_css_rgba(self, color):
@@ -199,7 +199,7 @@ class MarkdownView(ui.View):
 		
 		(self.linkButton, linkBarButton) = create_button('[]', self.link)
 		
-		(self.anchorButton, anchorBarButton) = create_button('<>', self.anchor)
+		#(self.anchorButton, anchorBarButton) = create_button('<>', self.anchor)
 		
 		(self.hashButton, hashBarButton) = create_button('#', self.heading)
 		
@@ -216,7 +216,7 @@ class MarkdownView(ui.View):
 		
 		doneBarButton = ObjCClass('UIBarButtonItem').alloc().initWithBarButtonSystemItem_target_action_(0, vobj, sel('endEditing:')) 
 		
-		keyboardToolbar.items = [indentBarButton, f, outdentBarButton, f, quoteBarButton, f, linkBarButton, f, anchorBarButton, f, hashBarButton, f, numberedBarButton, f, listBarButton, f, underscoreBarButton, f, backtickBarButton, f, doneBarButton]
+		keyboardToolbar.items = [indentBarButton, f, outdentBarButton, f, quoteBarButton, f, linkBarButton, f, hashBarButton, f, numberedBarButton, f, listBarButton, f, underscoreBarButton, f, backtickBarButton, f, doneBarButton]
 		vobj.inputAccessoryView = keyboardToolbar
 	
 	def indent(self, sender):
@@ -303,6 +303,11 @@ class MarkdownView(ui.View):
 		self.markup.replace_range((start, end), templ)
 		self.markup.selected_range = (new_start, new_end)
 		
+	'''
+	OBSOLETE: Use heading-ids or toc markdown extra instead
+	
+	* __<>__ - In-document links - Creates an anchor (`<a>` tag) after the selection, assumed to be some heading text. At the same time, places a link to the anchor on the clipboard, typically to be pasted in a table of contents.
+	'''
 	def anchor(self, sender):
 		templ = " <a name='#'></a>"
 		(start, end) = self.markup.selected_range
@@ -516,7 +521,7 @@ class MarkdownView(ui.View):
 		if previous_line_end > 0: 
 			#self.markup.replace_range((previous_line_end, previous_line_end), u'\u200d')
 			self.markup.replace_range((previous_line_end, previous_line_end), u'\u200d')
-		html = self.to_html(0)
+		html = self.to_html()
 		# After the HTML conversion, turn the character into a non-visible span element to act as scroll target
 		if previous_line_end > 0:
 			html = html.replace(u'\u200d', '<span id="scroll_here" style="display:hidden;"></span>')
