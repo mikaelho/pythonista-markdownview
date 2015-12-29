@@ -9,12 +9,24 @@ from string import Template
 
 class MarkdownView(ui.View):
 	
-	def __init__(self, accessory_keys = True):
+	def __init__(self, frame = None, flex = None, background_color = None, name = None, accessory_keys = True, extras = [], css = None):
+		
+		if frame: self.frame = frame
+		if flex: self.flex = flex
+		if background_color: self.background_color = background_color
+		if name: self.name = name
+		
+		self.extras = extras
+		
+		if css:
+			self.css = css
+		else:
+			self.css = self.default_css
+		
 		self.proxy_delegate = None
 		
 		self.enable_links = True
 		self.editing = False
-		self.extras = []
 		self.margins = (10, 10, 10, 10)
 		
 		self.link_prefix = 'pythonista-markdownview:relay?content='
@@ -26,6 +38,12 @@ class MarkdownView(ui.View):
 		
 		self.backpanel = ui.View()
 		self.add_subview(self.backpanel)
+		
+		# Web fragment is used to find the right scroll position when moving from editing to viewing
+		self.web_fragment = ui.WebView()
+		self.web_fragment.hidden = True
+		self.web_fragment.delegate = MarkdownView.ScrollLoadDelegate()
+		self.add_subview(self.web_fragment)
 
 		self.markup = ui.TextView()
 		self.add_subview(self.markup)
@@ -43,10 +61,13 @@ class MarkdownView(ui.View):
 		self.update_html()
 		self.markup.bounces = False 
 		
-		self.scroll_fragment = ui.WebView()
-		self.scroll_fragment.hidden = True
-		self.scroll_fragment.delegate = MarkdownView.ScrollLoadDelegate()
-		self.add_subview(self.scroll_fragment)
+		# Ghosts are used to determine preferred size
+		self.markup_ghost = ui.TextView()
+		self.markup_ghost.hidden = True
+		#self.add_subview(self.markup_ghost)
+		self.web_ghost = ui.WebView()
+		self.web_ghost.hidden = True
+		#self.add_subview(self.web_ghost)
 		
 		if accessory_keys:
 			self.create_accessory_toolbar()
@@ -57,34 +78,7 @@ class MarkdownView(ui.View):
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 		<title>Markdown</title>
 		<style>
-			* {
-				font-size: $font_size;
-				font-family: $font_family;
-				color: $text_color;
-				text-align: $text_align;
-				-webkit-text-size-adjust: none;
-				-webkit-tap-highlight-color: transparent;
-			}
-			h1 {
-				font-size: larger;
-			}
-			h3 {
-				font-style: italic;
-			}
-			h4 {
-				font-weight: normal;
-				font-style: italic;
-			}
-			code {
-				font-family: monospace;
-			}
-			li {
-				margin: .4em 0;
-			}
-			body {
-				#line-height: 1;
-				background: $background_color;
-			}
+			$css
 		</style>
 		<script type="text/javascript">
 			function debug(msg) {
@@ -151,12 +145,44 @@ class MarkdownView(ui.View):
 		</body>
 		</html>
 	'''
+	default_css = '''
+		* {
+			font-size: $font_size;
+			font-family: $font_family;
+			color: $text_color;
+			text-align: $text_align;
+			-webkit-text-size-adjust: none;
+			-webkit-tap-highlight-color: transparent;
+		}
+		h1 {
+			font-size: larger;
+		}
+		h3 {
+			font-style: italic;
+		}
+		h4 {
+			font-weight: normal;
+			font-style: italic;
+		}
+		code {
+			font-family: monospace;
+		}
+		li {
+			margin: .4em 0;
+		}
+		body {
+			#line-height: 1;
+			background: $background_color;
+		}
+	'''
 		
-	def to_html(self, md, scroll_pos = -1, content_only = False):
+	def to_html(self, md = None, scroll_pos = -1, content_only = False):
+		if md == None: md = self.markup.text
 		result = markdown(md, extras=self.extras)
 		if not content_only:
+			intro = Template(self.htmlIntro.safe_substitute(css = self.css))
 			(font_name, font_size) = self.font
-			result = self.htmlIntro.safe_substitute(
+			result = intro.safe_substitute(
 				background_color = self.to_css_rgba(self.markup.background_color), 
 				text_color = self.to_css_rgba(self.markup.text_color),
 				font_family = font_name,
@@ -177,7 +203,10 @@ class MarkdownView(ui.View):
 		return mapping[self.markup.alignment]
 		
 	def update_html(self):
-		self.web.load_html(self.to_html(self.markup.text, 0))
+		html = self.to_html(self.markup.text, 0)
+		self.web.load_html(html)
+		html_ghost = self.to_html(self.markup.text)
+		self.web_fragment.load_html(html_ghost)
 		
 		'''ACCESSORY TOOLBAR'''
 	
@@ -402,10 +431,41 @@ class MarkdownView(ui.View):
 		#self.background_color = value
 		self.update_html()	
 		
-	'''VIEW PROXY METHODS'''
+	'''SIZING METHODS'''
 	
-	def size_to_fit(self):
-		self.markup.size_to_fit()
+	
+	def size_to_fit(self, using='current', min_width=None, max_width=None, min_height=None, max_height=None):
+		(self.width, self.height) = self.preferred_size(using)
+			
+	def preferred_size(self, using='current', min_width=None, max_width=None, min_height=None, max_height=None):
+		
+		if using=='current':
+			if self.editing:
+				using='markdown'
+			else:
+				using='html'
+				
+		if using=='markdown':
+			self.markup_ghost.text = self.markup.text
+			view = self.markup_ghost
+		else:
+			view = self.web_ghost
+		
+		view.size_to_fit()
+		if max_width and view.width > max_width:
+			view.width = max_width
+			view.size_to_fit()
+		if max_width and view.width > max_width:
+			view.width = max_width
+		if min_width and view.width < min_width:
+			view.width = min_width
+		if max_height and view.height > max_height:
+			view.height = max_height
+		if min_height and view.height < min_height:
+			view.height = min_height
+
+		return (view.width, view.height)
+		
 		
 	'''TEXTVIEW PROXY PROPERTIES'''
 		
@@ -532,16 +592,24 @@ class MarkdownView(ui.View):
 	def textview_did_end_editing(self, textview):
 		(start, end) = self.markup.selected_range
 		html_fragment = self.to_html(self.markup.text[0:start])
-		self.scroll_fragment.frame = self.web.frame
-		self.scroll_fragment.load_html(html_fragment)
+		self.web_fragment.frame = self.web.frame
+		self.web_fragment.delegate.end_edit = True
+		self.web_fragment.load_html(html_fragment)
 
 	class ScrollLoadDelegate():
+		def __init__(self):
+			self.end_edit = False
 		def webview_did_finish_load(self, webview):
+			if not self.end_edit: return
+			self.end_edit = False
+			
 			m = webview.superview
 			scroll_pos = int(webview.eval_js('document.getElementById("content").clientHeight'))
 			html = m.to_html(m.markup.text, scroll_pos)
 			m.web.load_html(html)
-			m.web.hidden = False
+			html_ghost = m.to_html(m.markup.text)
+			m.web_ghost.load_html(html_ghost)
+			#m.web.hidden = False
 			m.editing = False
 			if m.can_call('textview_did_end_editing'):
 				m.proxy_delegate.textview_did_end_editing(textview)
@@ -620,6 +688,7 @@ class MarkdownView(ui.View):
 		# have extra stuff in front
 		elif url.endswith(self.init_postfix):
 			self.in_doc_prefix = url[:len(url)-len(self.init_postfix)]
+			self.web.hidden = False
 			return False
 			
 		# If link starts with the extra stuff detected
@@ -645,10 +714,12 @@ class MarkdownView(ui.View):
 	def webview_did_start_load(self, webview):
 		if self.can_call('webview_did_start_load'):
 			self.proxy_delegate.webview_did_start_load(webview)
-	def webview_did_finish_load(webview):
+	def webview_did_finish_load(self, webview):
+		#if not self.editing:
+			#self.web.hidden = False
 		if self.can_call('webview_did_finish_load'):
 			self.proxy_delegate.webview_did_finish_load(webview)
-	def webview_did_fail_load(webview, error_code, error_msg):
+	def webview_did_fail_load(self, webview, error_code, error_msg):
 		if self.can_call('webview_did_fail_load'):
 			self.proxy_delegate.webview_did_fail_load(webview, error_code, error_msg)
 				
@@ -662,7 +733,8 @@ if __name__ == "__main__":
 			with open(readme_filename, "w") as file_out:
 				file_out.write(textview.text)
 	init_string = ''
-	markdown_edit = MarkdownView()
+	
+	markdown_edit = MarkdownView(extras = ["header-ids"])
 	# Use this if you do not want accessory keys:
 	#markdown_edit = MarkdownView(accessory_keys = False)
 	markdown_edit.name = 'MarkdownView Documentation'
@@ -677,7 +749,6 @@ if __name__ == "__main__":
 	markdown_edit.background_color = '#f7f9ff'
 	markdown_edit.text_color = '#030b60'
 	markdown_edit.margins = (10, 10, 10, 10)
-	markdown_edit.extras = ["header-ids"]
 	
 	# Examples of other attributes to set:
 	#markdown_edit.alignment = ui.ALIGN_JUSTIFIED
