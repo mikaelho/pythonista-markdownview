@@ -20,13 +20,12 @@ MarkdownView is a [Pythonista](http://omz-software.com/pythonista/) UI library c
 
 * Integrated markdown editing and HTML viewing modes - end editing and HTML is shown, click somewhere on the HTML text and markdown editing starts in the same position.
 * Markdown editing supported by additional keys. (Thanks JonB for help on Obj-C.)
-* Navigation support when viewing HTML (back, forward).
-* Implements ui.TextView API.
-* Customizable through attributes or CSS
+* Implements ui.TextView API for easy integration to existing code.
+* Customizable through attributes or CSS.
 
 ##Quick start
 
-Download both the `MarkdownView.py` script and this `readme.md` file into same directory, and you can run the script in Pythonista to view and try out editing this readme file.
+Download (from [Github](https://github.com/mikaelho/pythonista-markdownview)) both the `MarkdownView.py` script and this `readme.md` file into same directory, and you can run the script in Pythonista to view and try out editing this readme file.
 
 Import MarkdownView as a module and use wherever you would use a TextView. Markdown text can be set and accessed with the _text_ attribute. Implement a delegate with `textview_did_end_editing` or  `textview_did_change` method - see the end of the MarkdownView.py file for an example. 
 
