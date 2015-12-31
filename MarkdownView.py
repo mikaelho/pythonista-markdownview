@@ -17,12 +17,7 @@ class MarkdownView(ui.View):
 		if name: self.name = name
 		
 		self.extras = extras
-		
-		if css:
-			self.css = css
-		else:
-			self.css = self.default_css
-		
+		self.css = css or self.default_css
 		self.proxy_delegate = None
 		
 		self.enable_links = True
@@ -177,7 +172,7 @@ class MarkdownView(ui.View):
 	'''
 		
 	def to_html(self, md = None, scroll_pos = -1, content_only = False):
-		if md == None: md = self.markup.text
+		md = md or self.markup.text
 		result = markdown(md, extras=self.extras)
 		if not content_only:
 			intro = Template(self.htmlIntro.safe_substitute(css = self.css))
@@ -306,30 +301,23 @@ class MarkdownView(ui.View):
 		
 	def heading(self, sender):
 		def func(line):
-			if str(line).startswith('###'):
-				return line[3:]
-			else:
-				return '#' + line
+			return line[3:] if str(line).startswith('###') else '#' + line
 		self.transform_lines(func, ignore_spaces = False)
 		
 	def numbered_list(self, data):
 		def func(line):
 			if line.startswith('1. '):
 				return line[3:]
-			elif line.startswith('* '):
-				return '1. ' + line[2:]
 			else:
-				return '1. ' + line
+				return '1. ' + (line[2:] if line.startswith('* ') else line)
 		self.transform_lines(func)
 		
 	def unordered_list(self, sender):
 		def func(line):
 			if str(line).startswith('* '):
 				return line[2:]
-			elif line.startswith('1. '):
-				return '* ' + line[3:]
 			else:
-				return '* ' + line
+				return '* ' + (line[3:] if line.startswith('1. ') else line)
 		self.transform_lines(func)
 		
 	def block_quote(self, sender):
@@ -393,8 +381,7 @@ class MarkdownView(ui.View):
 		(start, end) = self.markup.selected_range
 		text = self.markup.text
 		new_start = text.rfind('\n', 0, start)
-		if new_start == -1: new_start = 0
-		else: new_start += 1
+		new_start = 0 if new_start == -1 else new_start += 1
 		new_end = text.find('\n', end)
 		if new_end == -1: new_end = len(text)
 		#else: new_end -= 1
@@ -440,10 +427,7 @@ class MarkdownView(ui.View):
 	def preferred_size(self, using='current', min_width=None, max_width=None, min_height=None, max_height=None):
 		
 		if using=='current':
-			if self.editing:
-				using='markdown'
-			else:
-				using='html'
+			using = 'markdown' if self.editing else 'html'
 				
 		if using=='markdown':
 			self.markup_ghost.text = self.markup.text
