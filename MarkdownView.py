@@ -381,7 +381,7 @@ class MarkdownView(ui.View):
 		(start, end) = self.markup.selected_range
 		text = self.markup.text
 		new_start = text.rfind('\n', 0, start)
-		new_start = 0 if new_start == -1 else new_start += 1
+		new_start = 0 if new_start == -1 else new_start + 1
 		new_end = text.find('\n', end)
 		if new_end == -1: new_end = len(text)
 		#else: new_end -= 1
