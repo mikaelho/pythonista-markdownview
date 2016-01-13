@@ -191,8 +191,8 @@ class MarkdownView(ui.View):
 		return result
 		
 	def to_css_rgba(self, color):
-		return 'rgba(' + str(int(color[0]*255)) + ',' + str(int(color[1]*255)) + ',' + str(int(color[2]*255)) + ',' + str(color[3]) + ')'
-		
+		return 'rgba({:.0f},{:.0f},{:.0f},{})'.format(color[0]*255, color[1]*255, color[2]*255, color[3])
+
 	def to_css_alignment(self):
 		mapping = { ui.ALIGN_LEFT: 'left', ui.ALIGN_CENTER: 'center', ui.ALIGN_RIGHT: 'right', ui.ALIGN_JUSTIFIED: 'justify', ui.ALIGN_NATURAL: 'start' }
 		return mapping[self.markup.alignment]
