@@ -38,7 +38,10 @@ When you click a link in the HTML view:
 * `file:` links are opened in Pythonista built-in browser
 * All other links like `twitter:` are opened as defined by the OS, i.e. in the relevant app, if installed.
 
-If you want to change any of these, implement a delegate class with the `webview_should_start_load` method.
+You can change the handling of internal and external links by implementing a proxy with either or both of the following methods. Both should return True if MarkdownView should load the link.
+
+* `webview_should_load_internal_link(webview, url)`
+* `webview_should_load_external_link(webview, url)`
 
 ## Additional keys
 
@@ -90,7 +93,8 @@ Parameters:
 * `css` - Provide your own CSS styles, or set to an empty string to get the WebView defaults. Note that if you provide this, you have to provide all styles, not just your additions. Include `$font_size`, `$font_family`, `$text_color` and `$text_align` keywords in the appropriate places if you still want to have e.g. the `font` attribute of `MarkdownView` affect also the `WebView`.
 * `delegate` - Set an object that handles `TextView` and `WebView` delegated method calls. Following methods are supported:
   * `textview_should_begin_editing`, `textview_did_begin_editing`, `textview_did_end_editing`, `textview_should_change`, `textview_did_change`, `textview_did_change_selection`
-  * `webview_should_start_load`, `webview_did_start_load`, `webview_did_finish_load`,  `webview_did_fail_load`
+  * `webview_should_start_load` (deprecated by the custom methods below), `webview_did_start_load`, `webview_did_finish_load`,  `webview_did_fail_load`
+  * And the two custom methods; see the section on link behavior for details: `webview_should_load_internal_link`, `webview_should_load_external_link`
 * `editable` - True by default. Setting to False means you get the HTML view only. Could be useful if your app has different users and modes for "editor" and "viewer".
 * `editing` - True if currently in markdown editing mode
 * `font` - As TextView, affects WebView as well

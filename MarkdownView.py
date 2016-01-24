@@ -685,11 +685,15 @@ class MarkdownView(ui.View):
 			return self.proxy_delegate.webview_should_start_load(webview, url, nav_type)
 		# Handle in-doc links within the page
 		elif url.startswith('#'):
+			if self.can_call('webview_should_load_internal_link'):
+				return self.proxy_delegate.webview_should_load_internal_link(webview, url)
 			return True
 		# Open 'http(s)' links in Safari
 		# 'file' in built-in browser
 		# Others like 'twitter' as OS decides
 		else:
+			if self.can_call('webview_should_load_external_link'):
+				return self.proxy_delegate.webview_should_load_external_link(webview, url)
 			if url.startswith('http:') or url.startswith('https:'):
 				url = 'safari-' + url
 			webbrowser.open(url)
