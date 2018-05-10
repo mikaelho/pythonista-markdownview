@@ -280,7 +280,7 @@ class MarkdownView(ui.View):
 		(start, end) = tv.selected_range
 		(r_start, r_end) = (start, end)
 		r_len = len(to_remove)
-		if start <> end:
+		if start != end:
 			if tv.text[start:end].startswith(to_remove):
 				if end - start > 2*r_len + 1 and tv.text[start:end].endswith(to_remove):
 					to_insert = tv.text[start+r_len:end-r_len]
@@ -296,7 +296,7 @@ class MarkdownView(ui.View):
 				r_end = end + 2*len(to_insert)
 				to_insert = to_insert + tv.text[start:end] + to_insert
 		tv.replace_range((start, end), to_insert)
-		if start <> end:
+		if start != end:
 			tv.selected_range = (r_start, r_end)
 		
 	def heading(self, sender):
