@@ -1,4 +1,6 @@
 #coding: utf-8
+#!python2
+
 import ui
 from markdown2 import markdown
 from urllib import quote, unquote
@@ -6,6 +8,7 @@ import clipboard
 import webbrowser
 from string import Template
 #from RootView import RootView
+from objc_util import ObjCClass, ObjCInstance, sel, on_main_thread
 
 class MarkdownView(ui.View):
 	
@@ -204,7 +207,7 @@ class MarkdownView(ui.View):
 		self.web_fragment.load_html(html_ghost)
 		
 		'''ACCESSORY TOOLBAR'''
-	
+	@on_main_thread
 	def create_accessory_toolbar(self):
 		from objc_util import ObjCClass, ObjCInstance, sel
 		
